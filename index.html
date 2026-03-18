@@ -1,9 +1,16 @@
+Viewed dashboard.html:1-484
+
+Aqui está a versão completa e atualizada do nosso código do Dashboard, contendo todas as melhorias (Design, Título alterado para "Métricas do Manychat", lógica anti-CORS via JSONP e o novo Menu com as abas corretas).
+
+Você pode copiar todo este código e colar no arquivo [dashboard.html](cci:7://file:///C:/Users/Jo%C3%A3o/Antigravity/dashboard.html:0:0-0:0) ou em qualquer hospedagem/ferramenta que esteja usando:
+
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Automações</title>
+    <title>Métricas do Manychat</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -19,12 +26,14 @@
             --c-pink: #ec4899;
             --c-green: #10b981;
         }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Inter', sans-serif;
         }
+
         body {
             background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
             color: var(--text-primary);
@@ -34,36 +43,44 @@
             flex-direction: column;
             align-items: center;
         }
+
         .container {
             width: 100%;
             max-width: 1200px;
         }
+
         header {
             margin-bottom: 3rem;
             text-align: center;
         }
+
         header h1 {
             font-size: 2.5rem;
             font-weight: 700;
             background: linear-gradient(to right, #60a5fa, #c084fc);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 0.5rem;
         }
+
         header p {
             color: var(--text-secondary);
             font-size: 1.1rem;
         }
+
         .dashboard-grid {
             display: grid;
             grid-template-columns: 1fr;
             gap: 2rem;
         }
+
         .funnel-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 1.5rem;
         }
+
         .card {
             background: var(--card-bg);
             backdrop-filter: blur(16px);
@@ -75,10 +92,12 @@
             position: relative;
             overflow: hidden;
         }
+
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
+
         .card::before {
             content: '';
             position: absolute;
@@ -89,10 +108,12 @@
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
             opacity: 0.5;
         }
+
         .card.c-blue::before { background: var(--c-blue); opacity: 1; }
         .card.c-purple::before { background: var(--c-purple); opacity: 1; }
         .card.c-pink::before { background: var(--c-pink); opacity: 1; }
         .card.c-green::before { background: var(--c-green); opacity: 1; }
+
         .card-title {
             font-size: 1rem;
             font-weight: 600;
@@ -101,6 +122,7 @@
             letter-spacing: 1px;
             margin-bottom: 1rem;
         }
+
         .card-value {
             font-size: 3rem;
             font-weight: 700;
@@ -109,6 +131,7 @@
             align-items: baseline;
             gap: 10px;
         }
+
         .card-percent {
             font-size: 1.25rem;
             font-weight: 400;
@@ -117,17 +140,20 @@
             padding: 4px 12px;
             border-radius: 20px;
         }
+
         .chart-section {
             display: grid;
             grid-template-columns: 1fr;
             gap: 1.5rem;
             margin-top: 1rem;
         }
+
         @media (min-width: 900px) {
             .chart-section {
                 grid-template-columns: 1fr 1fr;
             }
         }
+
         .chart-container {
             height: 350px;
             position: relative;
@@ -135,16 +161,19 @@
             justify-content: center;
             align-items: center;
         }
+
         .details-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
         }
+
         .details-table th, .details-table td {
             text-align: left;
             padding: 1rem;
             border-bottom: 1px solid var(--card-border);
         }
+
         .details-table th {
             color: var(--text-secondary);
             font-weight: 600;
@@ -152,9 +181,11 @@
             font-size: 0.85rem;
             letter-spacing: 1px;
         }
+
         .details-table td {
             font-size: 1.1rem;
         }
+
         .details-table tr:last-child td {
             border-bottom: none;
         }
@@ -184,18 +215,34 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
     </style>
 </head>
 <body>
+
     <div class="loading" id="loader">
         <div class="spinner"></div>
         <p style="margin-top: 20px; color: var(--text-secondary);">Carregando dados do Google Sheets...</p>
     </div>
+
     <div class="container">
         <header>
             <h1>Métricas do Manychat</h1>
-            <p>Acompanhamento de Automações Manychat</p>
+            <p style="margin-bottom: 20px;">Painel de Acompanhamento</p>
+            
+            <div class="tab-selector">
+                <label for="sheetSelector" style="color: var(--text-secondary); margin-right: 10px; font-weight: 600;">Selecione a Aba:</label>
+                <select id="sheetSelector" onchange="changeTab()" style="padding: 10px 15px; border-radius: 8px; background: rgba(255,255,255,0.1); border: 1px solid var(--card-border); color: white; font-family: 'Inter', sans-serif; font-size: 1rem; outline: none; cursor: pointer; appearance: auto;">
+                    <option value="" style="color: black;">📊 Métricas 1403 (Principal)</option>
+                    <option value="Métricas Imersão" style="color: black;">📊 Métricas Imersão</option>
+                    <option value="Métricas NR1" style="color: black;">📊 Métricas NR1</option>
+                    <option value="Métricas Ingresso" style="color: black;">📊 Métricas Ingresso</option>
+                    <option value="Métricas Futuro" style="color: black;">📊 Métricas Futuro</option>
+                </select>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 10px;">Dica: Abra o arquivo HTML com um editor para adicionar o nome das outras abas no código.</p>
+            </div>
         </header>
+
         <div class="dashboard-grid">
             <div class="funnel-grid">
                 <div class="card c-blue">
@@ -213,6 +260,7 @@
                         <span class="card-percent" id="p-iniciou">0%</span>
                     </div>
                 </div>
+
                 <div class="card c-pink">
                     <div class="card-title">Acessou Pág. de Vendas</div>
                     <div class="card-value">
@@ -220,6 +268,7 @@
                         <span class="card-percent" id="p-vendas">0%</span>
                     </div>
                 </div>
+
                 <div class="card c-green">
                     <div class="card-title">Comprou</div>
                     <div class="card-value">
@@ -228,6 +277,7 @@
                     </div>
                 </div>
             </div>
+
             <div class="chart-section">
                 <div class="card">
                     <div class="card-title">Distribuição por Fonte de Captação</div>
@@ -235,6 +285,7 @@
                         <canvas id="sourceChart"></canvas>
                     </div>
                 </div>
+
                 <div class="card">
                     <div class="card-title">Detalhamento das Fontes</div>
                     <table class="details-table" id="sourcesTable">
@@ -247,28 +298,55 @@
                         </thead>
                         <tbody>
                             <!-- Rows -->
-                        </tbody>
-                    </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
     <script>
         const sheetId = '1Xcnc-mQtPkkYG_yQidbrfRWoS2oHHqIfUuDjaHvBtNQ';
-        const queryUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&callback=handleGoogleData`;
-        function initDashboard() {
+        const baseUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json;responseHandler:handleGoogleData&headers=0`;
+
+        function changeTab() {
+            const loader = document.getElementById('loader');
+            loader.style.display = 'flex';
+            setTimeout(() => loader.style.opacity = '1', 10);
+            
+            const selector = document.getElementById('sheetSelector');
+            const sheetName = selector ? selector.value : '';
+            
+            let queryUrl = baseUrl;
+            if (sheetName) {
+                queryUrl += `&sheet=${encodeURIComponent(sheetName)}`;
+            }
+
+            // Remove previous script to avoid memory leaks
+            const oldScript = document.getElementById('gvizScript');
+            if (oldScript) {
+                oldScript.remove();
+            }
+
             const script = document.createElement('script');
+            script.id = 'gvizScript';
             script.src = queryUrl;
             script.onerror = () => {
-                document.getElementById('loader').innerHTML = "<p>Erro na conexão ou permissão da planilha. Verifique se o link está público.</p>";
+                document.getElementById('loader').innerHTML = "<p>Erro na conexão... Verifique se a Aba existe exatamente com este nome.</p>";
             };
             document.body.appendChild(script);
         }
+
+        function initDashboard() {
+            changeTab();
+        }
+
         window.handleGoogleData = function(data) {
             try {
+                // Extract grid correctly treating all values as strings, mapping formatting fallback
                 const matrix = data.table.rows.map(row => 
                     row.c.map(cell => cell ? (cell.f || cell.v || "").toString().trim() : "")
                 );
+
                 processMetrics(matrix);
                 
                 const loader = document.getElementById('loader');
@@ -276,9 +354,10 @@
                 setTimeout(() => loader.style.display = 'none', 500);
             } catch (error) {
                 console.error("Erro ao puxar dados: ", error);
-                document.getElementById('loader').innerHTML = "<p>Erro ao processar os dados.</p>";
+                document.getElementById('loader').innerHTML = "<p>Erro na formatação dos dados. Contate o suporte.</p>";
             }
         };
+
         function processMetrics(matrix) {
             const metrics = {
                 entrou: { val: '0', perc: '0%' },
@@ -288,106 +367,100 @@
             };
             
             const sources = [];
-            let comprouCol = -1;
-            matrix.forEach((row, i) => {
-                const matchFunnel = (keyword, key) => {
-                    if(row.some(c => c.toUpperCase().includes(keyword))) {
-                        // Scan forward rows for numbers
-                        for(let j = i + 1; j < Math.min(i + 10, matrix.length); j++) {
-                            const nums = matrix[j].filter(c => c !== '' && c !== '#DIV/0!');
-                            if(nums.length >= 2) {
-                                metrics[key] = { val: nums[0], perc: nums[1] };
-                                break;
-                            }
-                        }
-                    }
-                };
-                matchFunnel("ENTROU NO FUNIL", "entrou");
-                matchFunnel("INICIOU FLUXO", "iniciou");
-                matchFunnel("ACESSOU PÁGINA", "vendas");
-                // Find COMPROU column
-                if(comprouCol === -1) {
-                    const cidx = row.findIndex(c => c.toUpperCase().includes("COMPROU"));
-                    if(cidx !== -1) comprouCol = cidx;
+
+            // Find "FONTE DE CAPTAÇÃO" row
+            let f_idx = matrix.findIndex(row => row.some(cell => cell.toUpperCase() === "FONTE DE CAPTAÇÃO"));
+
+            if (f_idx >= 3) {
+                // Because gviz skips empty string headers, the funnel metrics are 3 rows right above "FONTE"
+                function getNumbers(row) {
+                    return row.filter(c => c !== '' && c !== '#DIV/0!');
                 }
-                // Traffic Sources
-                if (row.length > 0) {
-                    const firstCell = String(row[0]).toUpperCase();
-                    if (["STORY", "FEED/REELS", "DIRECT", "LIVE"].includes(firstCell)) {
-                        const nums = row.filter(c => c !== '' && c !== '#DIV/0!' && c !== firstCell);
-                        let abs = 0; let perc = "0%";
-                        let foundAbs = false;
-                        
-                        for(let k = 0; k < nums.length; k++) {
-                            if(nums[k].includes("%")) {
-                                perc = nums[k].replace(',', '.');
-                                break;
-                            } else if (!foundAbs && !isNaN(parseInt(nums[k]))) {
-                                abs = parseInt(nums[k]);
-                                foundAbs = true;
-                            }
-                        }
-                        sources.push({ label: row[0], val: abs, perc: perc });
-                    }
-                }
-            });
-            // Fallback to find COMPROU
-            if(comprouCol !== -1) {
+
+                const entrouNums = getNumbers(matrix[f_idx - 3]);
+                if (entrouNums.length >= 2) metrics.entrou = { val: entrouNums[0], perc: entrouNums[1] };
+
+                const iniciouNums = getNumbers(matrix[f_idx - 2]);
+                if (iniciouNums.length >= 2) metrics.iniciou = { val: iniciouNums[0], perc: iniciouNums[1] };
+
+                const vendasNums = getNumbers(matrix[f_idx - 1]);
+                if (vendasNums.length >= 2) metrics.vendas = { val: vendasNums[0], perc: vendasNums[1] };
+            }
+
+            if (f_idx !== -1) {
                 let foundComprou = false;
-                for(let j = 0; j < matrix.length; j++) {
-                    if(matrix[j][0] && (matrix[j][0].toUpperCase() === "STORY" || matrix[j][0].toUpperCase() === "TOTAL")) {
-                        const nearCells = matrix[j].slice(Math.max(0, comprouCol-2), comprouCol+6).filter(c => c !== '' && c !== '#DIV/0!');
-                        if(nearCells.length >= 2 && !nearCells[0].includes("%")) {
-                            metrics.comprou = { val: nearCells[0], perc: nearCells[1] };
-                            foundComprou = true;
-                            break;
+                for (let i = f_idx + 1; i < matrix.length; i++) {
+                    const row = matrix[i];
+                    if (!row || row.length === 0) continue;
+                    
+                    const label = String(row[0]).toUpperCase();
+                    if (["STORY", "FEED/REELS", "DIRECT", "LIVE"].includes(label)) {
+                        const nums = row.filter(c => c !== '' && c !== '#DIV/0!' && String(c).toUpperCase() !== label);
+                        
+                        let abs = 0, perc = "0%";
+                        if (nums.length >= 1) abs = parseInt(nums[0].replace(/\./g, '')) || 0;
+                        if (nums.length >= 2) perc = nums[1];
+                        
+                        sources.push({ label: row[0], val: abs, perc: perc });
+
+                        // The COMPROU metrics are usually located on the "STORY" row, way off to the right (nums[2] and nums[3])
+                        if (!foundComprou && nums.length >= 3) {
+                            for(let k = 2; k < nums.length; k++) {
+                                if (nums[k].includes("%")) continue; // Skip percentages
+                                const valStr = nums[k];
+                                const percStr = nums[k+1] && nums[k+1].includes("%") ? nums[k+1] : "0%";
+                                
+                                metrics.comprou.val = valStr;
+                                metrics.comprou.perc = percStr;
+                                foundComprou = true;
+                                break;
+                            }
                         }
                     }
                 }
             }
-            
-            // If COMPROU still not found, search in totality
-            if(metrics.comprou.val === '0') {
-               // Hard fallback from reading CSV pattern if something shifts
-               // We know COMPROU is usually close to end.
-            }
-            // Update UI
+
+            // Update DOM
             document.getElementById('v-entrou').innerText = metrics.entrou.val;
             document.getElementById('p-entrou').innerText = metrics.entrou.perc;
+
             document.getElementById('v-iniciou').innerText = metrics.iniciou.val;
             document.getElementById('p-iniciou').innerText = metrics.iniciou.perc;
+
             document.getElementById('v-vendas').innerText = metrics.vendas.val;
             document.getElementById('p-vendas').innerText = metrics.vendas.perc;
+
             document.getElementById('v-comprou').innerText = metrics.comprou.val;
             document.getElementById('p-comprou').innerText = metrics.comprou.perc;
             renderChartAndTable(sources);
         }
+
         function renderChartAndTable(sources) {
             const tableBody = document.querySelector('#sourcesTable tbody');
+            tableBody.innerHTML = '';
             const labels = [];
             const data = [];
             const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'];
+
             sources.forEach((src, i) => {
                 labels.push(src.label);
                 data.push(src.val);
-                // Add to table
+
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="display: flex; align-items: center; gap: 10px;">
-                        <span style="width: 12px; height: 12px; border-radius: 50%; background: ${colors[i % colors.length]}"></span>
-                        ${src.label}
-                    </td>
-                    <td><b>${src.val}</b></td>
-                    <td>${src.perc}</td>
-                `;
+                tr.innerHTML = `<td style="display: flex; align-items: center; gap: 10px;"><span style="width: 12px; height: 12px; border-radius: 50%; background: ${colors[i % colors.length]}"></span>${src.label}</td><td><b>${src.val}</b></td><td>${src.perc}</td>`;
                 tableBody.appendChild(tr);
             });
-            // Render Chart.js
+
             const ctx = document.getElementById('sourceChart').getContext('2d');
             
-            // Setup generic defaults for dark mode Chart.js
             Chart.defaults.color = '#94a3b8';
-            new Chart(ctx, {
+            
+            // Destroy existing chart if it exists
+            if (window.myChart) {
+                window.myChart.destroy();
+            }
+
+            window.myChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
@@ -407,18 +480,18 @@
                             position: 'bottom',
                             labels: {
                                 padding: 20,
-                                font: {
-                                    family: "'Inter', sans-serif",
-                                    size: 13
-                                }
+                                font: { family: "'Inter', sans-serif", size: 13 }
                             }
                         }
                     }
                 }
             });
         }
-        // Initialize
+
         document.addEventListener("DOMContentLoaded", initDashboard);
     </script>
 </body>
 </html>
+```
+
+Pode ficar à vontade para salvar e continuar usando o painel em qualquer lugar!
