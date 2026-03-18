@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Automações</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient-start: #0f172a;
+            --bg-gradient-end: #1e1b4b;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --c-blue: #3b82f6;
+            --c-purple: #8b5cf6;
+            --c-pink: #ec4899;
+            --c-green: #10b981;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+        }
+        header {
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        .funnel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            opacity: 0.5;
+        }
+        .card.c-blue::before { background: var(--c-blue); opacity: 1; }
+        .card.c-purple::before { background: var(--c-purple); opacity: 1; }
+        .card.c-pink::before { background: var(--c-pink); opacity: 1; }
+        .card.c-green::before { background: var(--c-green); opacity: 1; }
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+        }
+        .card-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+        .card-percent {
+            font-size: 1.25rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.1);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        .chart-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        @media (min-width: 900px) {
+            .chart-section {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .chart-container {
+            height: 350px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .details-table th, .details-table td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .details-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        .details-table td {
+            font-size: 1.1rem;
+        }
+        .details-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-gradient-start);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--c-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loader">
+        <div class="spinner"></div>
+        <p style="margin-top: 20px; color: var(--text-secondary);">Carregando dados do Google Sheets...</p>
+    </div>
+    <div class="container">
+        <header>
+            <h1>Métricas do 1403</h1>
+            <p>Acompanhamento de Automações Manychat</p>
+        </header>
+        <div class="dashboard-grid">
+            <div class="funnel-grid">
+                <div class="card c-blue">
+                    <div class="card-title">Entrou no Funil</div>
+                    <div class="card-value">
+                        <span id="v-entrou">0</span>
+                        <span class="card-percent" id="p-entrou">0%</span>
+                    </div>
+                </div>
+                
+                <div class="card c-purple">
+                    <div class="card-title">Iniciou Fluxo</div>
+                    <div class="card-value">
+                        <span id="v-iniciou">0</span>
+                        <span class="card-percent" id="p-iniciou">0%</span>
+                    </div>
+                </div>
+                <div class="card c-pink">
+                    <div class="card-title">Acessou Pág. de Vendas</div>
+                    <div class="card-value">
+                        <span id="v-vendas">0</span>
+                        <span class="card-percent" id="p-vendas">0%</span>
+                    </div>
+                </div>
+                <div class="card c-green">
+                    <div class="card-title">Comprou</div>
+                    <div class="card-value">
+                        <span id="v-comprou">0</span>
+                        <span class="card-percent" id="p-comprou">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-section">
+                <div class="card">
+                    <div class="card-title">Distribuição por Fonte de Captação</div>
+                    <div class="chart-container">
+                        <canvas id="sourceChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Detalhamento das Fontes</div>
+                    <table class="details-table" id="sourcesTable">
+                        <thead>
+                            <tr>
+                                <th>Fonte</th>
+                                <th>Quantidade</th>
+                                <th>Proporção</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const sheetId = '1Xcnc-mQtPkkYG_yQidbrfRWoS2oHHqIfUuDjaHvBtNQ';
+        const queryUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&callback=handleGoogleData`;
+        function initDashboard() {
+            const script = document.createElement('script');
+            script.src = queryUrl;
+            script.onerror = () => {
+                document.getElementById('loader').innerHTML = "<p>Erro na conexão ou permissão da planilha. Verifique se o link está público.</p>";
+            };
+            document.body.appendChild(script);
+        }
+        window.handleGoogleData = function(data) {
+            try {
+                const matrix = data.table.rows.map(row => 
+                    row.c.map(cell => cell ? (cell.f || cell.v || "").toString().trim() : "")
+                );
+                processMetrics(matrix);
+                
+                const loader = document.getElementById('loader');
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+            } catch (error) {
+                console.error("Erro ao puxar dados: ", error);
+                document.getElementById('loader').innerHTML = "<p>Erro ao processar os dados.</p>";
+            }
+        };
+        function processMetrics(matrix) {
+            const metrics = {
+                entrou: { val: '0', perc: '0%' },
+                iniciou: { val: '0', perc: '0%' },
+                vendas: { val: '0', perc: '0%' },
+                comprou: { val: '0', perc: '0%' }
+            };
+            
+            const sources = [];
+            let comprouCol = -1;
+            matrix.forEach((row, i) => {
+                const matchFunnel = (keyword, key) => {
+                    if(row.some(c => c.toUpperCase().includes(keyword))) {
+                        // Scan forward rows for numbers
+                        for(let j = i + 1; j < Math.min(i + 10, matrix.length); j++) {
+                            const nums = matrix[j].filter(c => c !== '' && c !== '#DIV/0!');
+                            if(nums.length >= 2) {
+                                metrics[key] = { val: nums[0], perc: nums[1] };
+                                break;
+                            }
+                        }
+                    }
+                };
+                matchFunnel("ENTROU NO FUNIL", "entrou");
+                matchFunnel("INICIOU FLUXO", "iniciou");
+                matchFunnel("ACESSOU PÁGINA", "vendas");
+                // Find COMPROU column
+                if(comprouCol === -1) {
+                    const cidx = row.findIndex(c => c.toUpperCase().includes("COMPROU"));
+                    if(cidx !== -1) comprouCol = cidx;
+                }
+                // Traffic Sources
+                if (row.length > 0) {
+                    const firstCell = String(row[0]).toUpperCase();
+                    if (["STORY", "FEED/REELS", "DIRECT", "LIVE"].includes(firstCell)) {
+                        const nums = row.filter(c => c !== '' && c !== '#DIV/0!' && c !== firstCell);
+                        let abs = 0; let perc = "0%";
+                        let foundAbs = false;
+                        
+                        for(let k = 0; k < nums.length; k++) {
+                            if(nums[k].includes("%")) {
+                                perc = nums[k].replace(',', '.');
+                                break;
+                            } else if (!foundAbs && !isNaN(parseInt(nums[k]))) {
+                                abs = parseInt(nums[k]);
+                                foundAbs = true;
+                            }
+                        }
+                        sources.push({ label: row[0], val: abs, perc: perc });
+                    }
+                }
+            });
+            // Fallback to find COMPROU
+            if(comprouCol !== -1) {
+                let foundComprou = false;
+                for(let j = 0; j < matrix.length; j++) {
+                    if(matrix[j][0] && (matrix[j][0].toUpperCase() === "STORY" || matrix[j][0].toUpperCase() === "TOTAL")) {
+                        const nearCells = matrix[j].slice(Math.max(0, comprouCol-2), comprouCol+6).filter(c => c !== '' && c !== '#DIV/0!');
+                        if(nearCells.length >= 2 && !nearCells[0].includes("%")) {
+                            metrics.comprou = { val: nearCells[0], perc: nearCells[1] };
+                            foundComprou = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // If COMPROU still not found, search in totality
+            if(metrics.comprou.val === '0') {
+               // Hard fallback from reading CSV pattern if something shifts
+               // We know COMPROU is usually close to end.
+            }
+            // Update UI
+            document.getElementById('v-entrou').innerText = metrics.entrou.val;
+            document.getElementById('p-entrou').innerText = metrics.entrou.perc;
+            document.getElementById('v-iniciou').innerText = metrics.iniciou.val;
+            document.getElementById('p-iniciou').innerText = metrics.iniciou.perc;
+            document.getElementById('v-vendas').innerText = metrics.vendas.val;
+            document.getElementById('p-vendas').innerText = metrics.vendas.perc;
+            document.getElementById('v-comprou').innerText = metrics.comprou.val;
+            document.getElementById('p-comprou').innerText = metrics.comprou.perc;
+            renderChartAndTable(sources);
+        }
+        function renderChartAndTable(sources) {
+            const tableBody = document.querySelector('#sourcesTable tbody');
+            const labels = [];
+            const data = [];
+            const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'];
+            sources.forEach((src, i) => {
+                labels.push(src.label);
+                data.push(src.val);
+                // Add to table
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="display: flex; align-items: center; gap: 10px;">
+                        <span style="width: 12px; height: 12px; border-radius: 50%; background: ${colors[i % colors.length]}"></span>
+                        ${src.label}
+                    </td>
+                    <td><b>${src.val}</b></td>
+                    <td>${src.perc}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+            // Render Chart.js
+            const ctx = document.getElementById('sourceChart').getContext('2d');
+            
+            // Setup generic defaults for dark mode Chart.js
+            Chart.defaults.color = '#94a3b8';
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    family: "'Inter', sans-serif",
+                                    size: 13
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        // Initialize
+        document.addEventListener("DOMContentLoaded", initDashboard);
+    </script>
+</body>
+</html>
